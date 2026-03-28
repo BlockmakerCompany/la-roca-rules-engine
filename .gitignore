@@ -1,0 +1,42 @@
+# --- La Roca: JIT & Artifacts ---
+.cache/
+*.plan
+*.log
+
+# --- Build & Binaries ---
+build/
+bin/
+*.o
+*.obj
+*.bin
+*.exe
+*.out
+*.app
+
+# --- NASM Specific ---
+*.lst
+*.map
+
+# --- IDEs & Editors ---
+.idea/
+.vscode/
+*.swp
+*~
+*.iml
+.project
+.settings/
+.classpath
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Go (Benchmarks) ---
+/vendor/
+go.sum
+# Descomenta la siguiente si no quieres subir el binario del bench:
+# tests/bench
+
+# --- Docker ---
+.dockerignore

@@ -1,0 +1,13 @@
+services:
+  rules-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: blockmaker/la-roca-rules-engine:latest
+    container_name: rules-engine
+    ports:
+      - "8080:8080"
+    environment:
+      # Based on your original main.asm code: 't' for trace, 'e' for error
+      - LOG_LEVEL=trace
+    restart: unless-stopped

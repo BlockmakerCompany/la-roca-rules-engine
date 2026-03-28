@@ -1,0 +1,131 @@
+openapi: 3.0.3
+info:
+  title: La Roca Rules Engine
+  description: >
+    An ultra-lightweight, lightning-fast rules engine written entirely in x86-64 Assembly.
+    It features a built-in Hierarchical Expression Evaluator (Shunting-Yard) allowing for complex 
+    parentheses grouping and inline boolean logic. It operates with O(1) memory lookup for context 
+    variables, SSE2 hardware acceleration for Float64 math and arithmetic, Zero-Copy memory mutation 
+    for Strings, and absolute whitespace tolerance—all while maintaining ~80k+ RPS.
+  version: 3.1.0
+  contact:
+    name: Blockmaker
+    url: https://github.com/BlockmakerCompany
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /live:
+    get:
+      summary: Liveness Probe
+      description: Checks if the engine process is up and running.
+      responses:
+        '200':
+          description: Process is alive.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Alive
+
+  /ready:
+    get:
+      summary: Readiness Probe
+      description: Checks if the engine is ready to accept evaluation requests.
+      responses:
+        '200':
+          description: Engine is ready.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Ready
+
+  /eval:
+    post:
+      summary: Evaluate Logical Rules
+      description: >
+        Evaluates one or multiple logical rules against an optional context map.
+        The engine features a Hardware-Level Type Dispatcher for Float64 and Strings, 
+        an SSE2 Math ALU for arithmetic operations, and a Zero-Allocation Stack for hierarchical nested rules.
+        
+        **Payload Structure (Line by Line):**
+        1. **Mode (Optional):** `MODE=AND` (Fail-Fast, default) or `MODE=OR` (Succeed-Fast). Acts as the global strategy across multiple lines.
+        2. **Context Map (Optional):** Comma-separated key-value pairs (e.g., `x=7,role="admin"`). Whitespace around keys/values is safely ignored. If no map is provided but multiple rules are sent, leave an empty line `\n`.
+        3. **Rules:** One rule per line. You can use simple comparisons, complex nested groups, or mathematical formulas.
+
+        **Supported Operators & Logic:**
+        * `+` / `-` / `*` / `/` / `%` : Arithmetic Operations (Float64)
+        * `>` / `<` : Greater/Less Than (Float64)
+        * `=` : Strict Equality (Float64, String)
+        * `~` : Contains / Substring search (String)
+        * `^` : Equals Ignore Case (String)
+        * `#` : Length Unary Operator (String -> Float64) e.g., `#username > 5`
+        * `NOW` : Current Unix Timestamp injection (Float64)
+        * `(` / `)` : Hierarchical Grouping
+        * `AND` / `OR` : Inline Boolean Operators
+        
+        *Note: Standalone arithmetic results use Implicit Boolean Coercion (Non-Zero = True, Zero = False).*
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+            examples:
+              Single Literal Rule:
+                summary: Direct evaluation without map or mode
+                value: |
+                  7>2
+              Variables with AND Strategy:
+                summary: Map with variables and multiple rules (Fail-Fast)
+                value: |
+                  MODE=AND
+                  x=8,y=2,z=5
+                  x>y
+                  z<x
+                  y=2
+              Advanced String Operations:
+                summary: Zero-Copy String Evaluation & Length Operator
+                value: |
+                  email="admin@blockmaker.net",country="US"
+                  email ~ "blockmaker"
+                  country ^ "us"
+                  #email > 10
+              Arithmetic & Real-Time Evaluation:
+                summary: Inline math with SSE2 and time-based rules
+                value: |
+                  price=100,tax=1.21,last_seen=172800
+                  (price * tax) > 120
+                  (NOW - last_seen) > 86400
+                  5 + 5
+              Hierarchical Logic:
+                summary: Parentheses, inline AND/OR logic, and Whitespace Tolerance
+                value: |
+                  MODE=OR
+                    user_age = 25  ,  role = "editor"  ,  status = "active"
+                  ( user_age > 18 AND role = "admin" )
+                  ( status = "active" AND #role > 3 )
+      responses:
+        '200':
+          description: Successful evaluation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+              examples:
+                True Result:
+                  value: {"result":true}
+                False Result:
+                  value: {"result":false}
+        '400':
+          description: Bad Request / Syntax Error. Returned if operands are invalid, operator is unknown, Type Mismatch occurs, or unbalanced parentheses trigger a Panic Recovery (Stack Unwinding).
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Error
