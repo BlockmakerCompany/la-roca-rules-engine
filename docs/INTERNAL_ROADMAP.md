@@ -53,7 +53,7 @@ del README. Prioridad:
   indexa `var_map` por el índice horneado en el bytecode; es código muerto en la
   práctica (ver BUG-8) y hay que alinearlo con el nuevo layout.
 
-### BUG-2: Cache JIT valida solo el hash, no la regla
+### BUG-2: Cache JIT valida solo el hash, no la regla — ✅ RESUELTO (cache desactivado)
 
 - **Dónde:** `src/engine/cache.asm:48` → `cmp [rdx], rbx` (solo hash de 64 bits).
 - **Qué pasa:** `cache_lookup` considera "hit" si el hash coincide, sin
@@ -61,11 +61,11 @@ del README. Prioridad:
   colisiones generables. Un hit falso devuelve el bytecode de otra regla.
 - **Persistencia:** `cache_store_plan` escribe a disco en `.cache/<hash>.plan`
   (`cache.asm:135-153`), así que una colisión **sobrevive entre reinicios**.
-- **Fix propuesto:** guardar junto al hash una copia (o al menos un segundo
-  fingerprint más fuerte) del source y validarla antes de servir el plan; o
-  no cachear por hash no criptográfico.
+- **Fix aplicado:** el cache JIT quedó **desactivado** (`cache_lookup` devuelve
+  siempre miss, `cache_store_plan` es no-op). Ver BUG-8 para la causa raíz.
+  Con el cache apagado, BUG-2 queda sin efecto (nunca hay hit).
 
-### BUG-8: El cache JIT hornea valores resueltos de variables (datos viejos)
+### BUG-8: El cache JIT hornea valores resueltos de variables (datos viejos) — ✅ RESUELTO (cache desactivado)
 
 - **Dónde:**
   - `src/compiler/lexer_math.asm:53-59`: si `get_operand` devuelve un float,
@@ -84,9 +84,21 @@ del README. Prioridad:
   variables *string* (RAX==2), y pasa `R12` (puntero, no hash) como argumento:
   es una ruta rota/muerta. Las variables *float* van por `emit_push_const`.
   Por eso `vm.asm .op_push_var` no se ejerce en la práctica.
-- **Fix propuesto:** no hornear valores; resolver variables por nombre en
-  tiempo de ejecución del VM (string pool en el plan) o no cachear reglas que
-  referencien variables.
+- **Fix aplicado (stopgap):** el cache JIT quedó **desactivado** en
+  `src/engine/cache.asm` (`cache_lookup` → siempre miss, `cache_store_plan` →
+  no-op). Cada request se interpreta fresco y devuelve el resultado correcto.
+  Tests de regresión agregados en `tests/test.sh` (sección 15).
+- **Causa raíz (para el rework):**
+  - `emit_comparison` y `emit_logic` **nunca se llaman**; el plan compilado solo
+    contiene aritmética (push_const/push_var/push_now + ops matemáticas).
+  - Las reglas de comparación pura (ej. `7>2`) compilan a un plan vacío `[END]`;
+    en el cache hit, `vm_execute` lee basura del stack como valor "dangling" y
+    devuelve `true` siempre.
+  - Las variables float se hornean como constantes (`emit_push_const`), así que
+    el plan reusa valores viejos en el siguiente request.
+- **Fix definitivo (futuro):** emitir el plan completo (comparaciones + lógica)
+  y resolver variables por nombre en tiempo de ejecución del VM (string pool),
+  o no cachear reglas que referencien variables.
 
 ---
 
@@ -140,14 +152,16 @@ del README. Prioridad:
 
 ## 🟢 P3 — Correctitud del lenguaje
 
-### BUG-7: Operadores de 2 caracteres sin implementar
+### BUG-7: Operadores de 2 caracteres sin implementar — 📝 No documentado
 
 - **Dónde:** `src/alu/evaluator.asm` (avanza 1 byte con `inc rdi` al detectar
-  un operador de comparación).
+  un operador de comparación). `parser.asm:109-121` *sí* reconoce `>=`, `<=`,
+  `==`, `!=`, `^=` al decidir mapa vs regla (intención no completada).
 - **Qué pasa:** `==`, `!=`, `>=`, `<=` no se procesan correctamente; el segundo
   carácter queda como ruido para el parser.
-- **Fix propuesto:** si el producto los anuncia, consumir los dos bytes; si no,
-  sacarlos de la doc.
+- **Estado:** el README (`Supported Operators`) **no documenta** estos
+  operadores, así que no es un bug de feature anunciada. Si se quieren
+  soportar, hay que consumir los dos bytes en el evaluador y documentarlos.
 
 ---
 
@@ -174,13 +188,13 @@ del README. Prioridad:
 |---|-------|-----------|--------|
 | 1 | ✅ Rediseñar `var_map` con open addressing + verificación de nombre | P0 | Alto (toca ABI interna) |
 | 2 | ✅ Test de colisión (ba/iz) en `tests/test.sh` | P0 | Bajo |
-| 2b | Arreglar BUG-8: no hornear valores en el cache JIT (resolver en VM) | P0 | Alto |
-| 3 | Validar el source en el cache JIT (o fingerprint más fuerte) | P0 | Medio |
+| 2b | ✅ Desactivar cache JIT roto (BUG-2 + BUG-8) con tests de regresión | P0 | Bajo |
+| 3 | ✅ (absorbido en 2b) Validación del cache JIT | P0 | Medio |
 | 4 | Gatear logging por `log_level` | P1 | Bajo |
 | 5 | Loop de lectura + límite de buffer en el server | P2 | Medio |
 | 6 | Timeout de idle y límite de conexiones | P2 | Medio |
 | 7 | Validar método `POST` en el router | P2 | Bajo |
-| 8 | Operadores de 2 caracteres (`==`, `!=`, `>=`, `<=`) | P3 | Medio |
+| 8 | Operadores de 2 caracteres (`==`, `!=`, `>=`, `<=`) — no documentados | P3 | Medio |
 | 9 | Corregir/limpiar README y BENCHMARKS (claims falsos, DJB2) | P4 | Bajo |
 | 10 | Eliminar o terminar `tokenize_and_store` | P4 | Bajo |
 

@@ -284,6 +284,24 @@ TS_NEXT_YEAR=$(($(date +%s) + 31536000))
 PAYLOAD_TIME_3=$(printf "expiry=$TS_NEXT_YEAR\nNOW < expiry")
 check_payload "/eval" "POST" "$PAYLOAD_TIME_3" '{"result":true}' "Time: NOW is before future expiry (Expected: True)"
 
+echo ""
+echo "--- 15. Cache-Hit Correctness (Repeat Requests) ---"
+# The JIT cache is disabled (P0 stopgap) because it baked resolved values and
+# emitted incomplete plans. These repeat-request tests are regression guards:
+# if a broken cache is ever re-enabled, the second request will flip results.
+check_payload "/eval" "POST" "7>2" '{"result":true}' "Repeat: '7>2' (1st request, Expected: True)"
+check_payload "/eval" "POST" "7>2" '{"result":true}' "Repeat: '7>2' (2nd request, Expected: True)"
+
+check_payload "/eval" "POST" "3>8" '{"result":false}' "Repeat: '3>8' (1st request, Expected: False)"
+check_payload "/eval" "POST" "3>8" '{"result":false}' "Repeat: '3>8' (2nd request, Expected: False)"
+
+# BUG-8 guard: same rule, different context. A stale cached plan would reuse
+# total=100 and wrongly return true for total=10.
+PAYLOAD_CACHE_A=$(printf "total=100,parts=4\n(total / parts) = 25")
+PAYLOAD_CACHE_B=$(printf "total=10,parts=4\n(total / parts) = 25")
+check_payload "/eval" "POST" "$PAYLOAD_CACHE_A" '{"result":true}' "Repeat: (total/parts)=25 with total=100 (Expected: True)"
+check_payload "/eval" "POST" "$PAYLOAD_CACHE_B" '{"result":false}' "Repeat: (total/parts)=25 with total=10 (Expected: False)"
+
 echo "-----------------------------------------------------------------"
 echo -e "${GREEN}✅ ALL TESTS PASSED SUCCESSFULLY!${NC}"
 echo "La Roca Rules Engine MVP is rock solid."

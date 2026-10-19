@@ -33,29 +33,18 @@ section .text
 ; Out: RAX = Pointer to Bytecode (Plan) or 0 if Miss
 ; -----------------------------------------------------------------------------
 cache_lookup:
-    push rbx
-    mov rbx, rdi            ; Save hash
-
-    ; Calculate slot index: Index = Hash & 1023
-    mov rax, rdi
-    and rax, 1023
-
-    ; Calculate Offset: Offset = Index * 520
-    imul rax, rax, 520
-    lea rdx, [cache_table + rax]
-
-    ; Check if stored hash matches requested hash
-    cmp [rdx], rbx
-    jne .miss
-
-    ; Cache Hit: Return pointer to bytecode area (Slot + 8)
-    lea rax, [rdx + 8]
-    pop rbx
-    ret
-
-.miss:
-    xor rax, rax            ; Return NULL
-    pop rbx
+    ; =========================================================================
+    ; JIT CACHE DISABLED (P0 correctness stopgap).
+    ; The compiler never emits comparison/logic opcodes (emit_comparison and
+    ; emit_logic are never called) and bakes resolved float values into the
+    ; plan (emit_push_const in lexer_math.asm). Cached plans therefore return
+    ; wrong results on hit: comparison-only rules compile to an empty [END]
+    ; plan (the VM then reads garbage as a truthy dangling value), and
+    ; arithmetic rules reuse stale variable values. See docs/INTERNAL_ROADMAP.md
+    ; (BUG-2, BUG-8). Until the VM compiles complete plans with runtime variable
+    ; resolution, every request must be interpreted fresh.
+    ; =========================================================================
+    xor rax, rax            ; Always miss
     ret
 
 ; -----------------------------------------------------------------------------
@@ -64,6 +53,13 @@ cache_lookup:
 ; In: RDI = 64-bit Hash, RSI = Source Bytecode Buffer (512 bytes)
 ; -----------------------------------------------------------------------------
 cache_store_plan:
+    ; =========================================================================
+    ; JIT CACHE DISABLED: do not persist plans (RAM or disk) while the cache is
+    ; broken. See cache_lookup above and docs/INTERNAL_ROADMAP.md (BUG-8).
+    ; =========================================================================
+    ret
+
+    ; ---- Original (disabled) implementation preserved below for the rework ----
     push rdi                ; Save Hash
     push rsi                ; Save Source Ptr
     push rcx

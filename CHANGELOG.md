@@ -7,3 +7,4 @@ El formato sigue Keep a Changelog y este proyecto usa versionado semántico.
 
 ### Fixed
 - mapa de variables a prueba de colisiones (open addressing + verificación de nombre)
+- desactivar el cache JIT roto que devolvía resultados incorrectos en cache hit
