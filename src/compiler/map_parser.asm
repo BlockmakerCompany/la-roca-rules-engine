@@ -22,7 +22,7 @@ section .text
 ; Responsibility: Zeroes out the variable map to prevent cross-request pollution.
 ; -----------------------------------------------------------------------------
 clear_var_map:
-    push rdi                ; Preservar RDI (puntero al buffer HTTP del caller)
+    push rdi                ; Preserve RDI (pointer to the caller's HTTP buffer)
     push rcx
     push rax
     lea rdi, [var_map]
@@ -48,56 +48,56 @@ build_var_map:
     push r13
     push r14
 
-    ; Si el primer carácter es un salto de línea, no hay mapa.
+    ; If the first character is a newline, there is no map.
     cmp byte [rdi], 0x0A
     je .done
 
 .map_loop:
-    ; 1. Hashear el nombre de la variable (RAX=hash, RCX=len, RDX=name_start).
-    ;    hash_name avanza RDI hasta el delimitador (ej: '=' o un espacio).
+    ; 1. Hash the variable name (RAX=hash, RCX=len, RDX=name_start).
+    ;    hash_name advances RDI up to the delimiter (e.g. '=' or a space).
     call hash_name
     mov rbx, rax            ; RBX = hash
     mov r12, rcx            ; R12 = name length
     mov r13, rdx            ; R13 = name start pointer
 
-    ; 2. Sincronizar con el símbolo '=' tolerando espacios.
+    ; 2. Sync up to the '=' symbol, tolerating spaces.
 .find_equals:
     cmp byte [rdi], '='
     je .found_equals
-    cmp byte [rdi], 0x0A    ; Error: fin de línea sin '='
+    cmp byte [rdi], 0x0A    ; Error: end of line without '='
     je .error
-    cmp byte [rdi], 0       ; Error: fin de buffer inesperado
+    cmp byte [rdi], 0       ; Error: unexpected end of buffer
     je .error
     inc rdi
     jmp .find_equals
 
 .found_equals:
-    inc rdi                 ; Saltamos el '='
+    inc rdi                 ; Skip the '='
 
-    ; 3. Open addressing: buscar el slot por nombre (con verificación completa).
+    ; 3. Open addressing: find the slot by name (with full verification).
     mov rax, rbx
     and rax, 255
     shl rax, 5              ; index * 32
-    lea r14, [var_map + rax] ; R14 = slot candidato
-    xor r8, r8              ; contador de probing (máx 256)
+    lea r14, [var_map + rax] ; R14 = candidate slot
+    xor r8, r8              ; probing counter (max 256)
 
 .probe:
     mov rax, [r14]          ; slot.name_ptr
     test rax, rax
-    jz .insert              ; Slot vacío -> insertar
+    jz .insert              ; Empty slot -> insert
 
-    cmp [r14 + 8], r12      ; ¿coincide la longitud?
+    cmp [r14 + 8], r12      ; Does the length match?
     jne .next_slot
 
-    ; Comparar el nombre byte a byte (name_len bytes).
-    push rdi                ; Preservar RDI (inicio del valor)
-    mov rsi, rax            ; nombre almacenado
-    mov rdi, r13            ; nombre consultado
-    mov rcx, r12            ; longitud
+    ; Compare the name byte by byte (name_len bytes).
+    push rdi                ; Preserve RDI (start of the value)
+    mov rsi, rax            ; stored name
+    mov rdi, r13            ; queried name
+    mov rcx, r12            ; length
     cld
     repe cmpsb
-    pop rdi                 ; Restaurar RDI
-    je .store_value         ; Mismo nombre -> reutilizar slot
+    pop rdi                 ; Restore RDI
+    je .store_value         ; Same name -> reuse slot
 
 .next_slot:
     add r14, 32
@@ -108,20 +108,20 @@ build_var_map:
 .no_wrap:
     inc r8
     cmp r8, 256
-    jae .error              ; Tabla llena (no debería pasar)
+    jae .error              ; Table full (should not happen)
     jmp .probe
 
 .insert:
-    mov [r14], r13          ; Guardar puntero al nombre
-    mov [r14 + 8], r12      ; Guardar longitud del nombre
+    mov [r14], r13          ; Save pointer to the name
+    mov [r14 + 8], r12      ; Save name length
 
 .store_value:
-    ; 4. Parsear y guardar el valor (tag en +16, value en +24).
+    ; 4. Parse and store the value (tag at +16, value at +24).
     lea r9, [r14 + 16]
     call parse_and_store_value
 
-    ; 5. Determinar si hay más variables o terminamos el mapa.
-    ;    parse_and_store_value deja RDI en el siguiente delimitador (',' o '\n').
+    ; 5. Determine whether there are more variables or the map is done.
+    ;    parse_and_store_value leaves RDI at the next delimiter (',' or '\n').
 .check_delimiter:
     cmp byte [rdi], ','
     je .next_var
@@ -134,7 +134,7 @@ build_var_map:
     jmp .check_delimiter
 
 .next_var:
-    inc rdi                 ; Saltamos la coma
+    inc rdi                 ; Skip the comma
     jmp .map_loop
 
 .done:

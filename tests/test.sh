@@ -46,8 +46,8 @@ check_status() {
     local payload=$4
     local description=$5
 
-    # 🛡️ El "Borrador de Fantasmas": 100 espacios en blanco.
-    # Sobrescribe cualquier dato residual en el buffer lógico del motor.
+    # 🛡️ The "Ghost Draft": 100 blank spaces.
+    # Overwrites any residual data in the engine's logical buffer.
     local pad="                                                                                                    "
     local padded_payload="${payload}${pad}"
 
@@ -133,7 +133,7 @@ check_payload "/eval" "POST" "$MAP_PAYLOAD_1" '{"result":true}' "Evaluate 'user_
 MAP_PAYLOAD_2=$(printf "balance=300,cost=800\nbalance>cost")
 check_payload "/eval" "POST" "$MAP_PAYLOAD_2" '{"result":false}' "Evaluate 'balance>cost' with context (Expected: False)"
 
-# Variables vs Literals (Híbrido)
+# Variables vs Literals (Hybrid)
 MAP_PAYLOAD_3=$(printf "is_active=1\nis_active=1")
 check_payload "/eval" "POST" "$MAP_PAYLOAD_3" '{"result":true}' "Evaluate 'is_active=1' mixed var and literal (Expected: True)"
 

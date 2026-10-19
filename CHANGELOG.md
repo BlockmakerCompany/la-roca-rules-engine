@@ -1,10 +1,13 @@
 # Changelog
 
-Todas las modificaciones notables de este proyecto se documentan en este archivo.
-El formato sigue Keep a Changelog y este proyecto usa versionado semántico.
+All notable changes to this project are documented in this file.
+The format follows Keep a Changelog and this project uses semantic versioning.
 
 ## [Unreleased]
 
 ### Fixed
-- mapa de variables a prueba de colisiones (open addressing + verificación de nombre)
-- desactivar el cache JIT roto que devolvía resultados incorrectos en cache hit
+- collision-proof variable map (open addressing + name verification)
+- disable the broken JIT cache that returned incorrect results on cache hit
+
+### Docs
+- translate internal roadmap and comments to English

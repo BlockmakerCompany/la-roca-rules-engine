@@ -40,26 +40,26 @@ skip_spaces:
 lookup_var:
     and rax, 255
     shl rax, 5              ; index * 32
-    lea r8, [var_map + rax] ; R8 = slot candidato
-    mov r11, rcx            ; Preservar longitud a través de cmpsb
-    xor r9, r9              ; contador de probing
+    lea r8, [var_map + rax] ; R8 = candidate slot
+    mov r11, rcx            ; Preserve length across cmpsb
+    xor r9, r9              ; probing counter
 
 .loop:
     mov rax, [r8]           ; slot.name_ptr
     test rax, rax
-    jz .not_found           ; Slot vacío -> no existe
+    jz .not_found           ; Empty slot -> not found
 
-    cmp [r8 + 8], r11       ; ¿coincide la longitud?
+    cmp [r8 + 8], r11       ; does the length match?
     jne .next
 
-    ; Comparar nombre byte a byte.
-    push rdi                ; Preservar RDI del caller (delimitador)
-    mov rsi, rax            ; nombre almacenado
-    mov rdi, rdx            ; nombre consultado
-    mov rcx, r11            ; longitud
+    ; Compare name byte by byte.
+    push rdi                ; Preserve caller's RDI (delimiter)
+    mov rsi, rax            ; stored name
+    mov rdi, rdx            ; queried name
+    mov rcx, r11            ; length
     cld
     repe cmpsb
-    pop rdi                 ; Restaurar RDI
+    pop rdi                 ; Restore RDI
     je .found
 
 .next:
