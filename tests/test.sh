@@ -46,8 +46,8 @@ check_status() {
     local payload=$4
     local description=$5
 
-    # 🛡️ El "Borrador de Fantasmas": 100 espacios en blanco.
-    # Sobrescribe cualquier dato residual en el buffer lógico del motor.
+    # 🛡️ The "Ghost Draft": 100 blank spaces.
+    # Overwrites any residual data in the engine's logical buffer.
     local pad="                                                                                                    "
     local padded_payload="${payload}${pad}"
 
@@ -133,12 +133,24 @@ check_payload "/eval" "POST" "$MAP_PAYLOAD_1" '{"result":true}' "Evaluate 'user_
 MAP_PAYLOAD_2=$(printf "balance=300,cost=800\nbalance>cost")
 check_payload "/eval" "POST" "$MAP_PAYLOAD_2" '{"result":false}' "Evaluate 'balance>cost' with context (Expected: False)"
 
-# Variables vs Literals (Híbrido)
+# Variables vs Literals (Hybrid)
 MAP_PAYLOAD_3=$(printf "is_active=1\nis_active=1")
 check_payload "/eval" "POST" "$MAP_PAYLOAD_3" '{"result":true}' "Evaluate 'is_active=1' mixed var and literal (Expected: True)"
 
 MAP_PAYLOAD_4=$(printf "retry_count=1\nretry_count>4")
 check_payload "/eval" "POST" "$MAP_PAYLOAD_4" '{"result":false}' "Evaluate 'retry_count>4' mixed var and literal (Expected: False)"
+
+echo "--- 6b. Collision Safety (Name-Verified Open Addressing) ---"
+# 'ba' and 'iz' both hash to slot 3 under the legacy 8-bit DJB2 hash.
+# They must resolve independently by name, not by slot index.
+COLLISION_1=$(printf "ba=1,iz=2\nba=1")
+check_payload "/eval" "POST" "$COLLISION_1" '{"result":true}' "Collision: 'ba=1' resolves ba (Expected: True)"
+
+COLLISION_2=$(printf "ba=1,iz=2\niz=2")
+check_payload "/eval" "POST" "$COLLISION_2" '{"result":true}' "Collision: 'iz=2' resolves iz (Expected: True)"
+
+COLLISION_3=$(printf "ba=1,iz=2\nba=2")
+check_payload "/eval" "POST" "$COLLISION_3" '{"result":false}' "Collision: 'ba=2' is false (Expected: False)"
 echo ""
 
 echo "--- 7. Multi-Rule Engine (AND Strategy / Fail-Fast) ---"
@@ -271,6 +283,24 @@ check_payload "/eval" "POST" "$PAYLOAD_TIME_2" '{"result":true}' "Time: More tha
 TS_NEXT_YEAR=$(($(date +%s) + 31536000))
 PAYLOAD_TIME_3=$(printf "expiry=$TS_NEXT_YEAR\nNOW < expiry")
 check_payload "/eval" "POST" "$PAYLOAD_TIME_3" '{"result":true}' "Time: NOW is before future expiry (Expected: True)"
+
+echo ""
+echo "--- 15. Cache-Hit Correctness (Repeat Requests) ---"
+# The JIT cache is disabled (P0 stopgap) because it baked resolved values and
+# emitted incomplete plans. These repeat-request tests are regression guards:
+# if a broken cache is ever re-enabled, the second request will flip results.
+check_payload "/eval" "POST" "7>2" '{"result":true}' "Repeat: '7>2' (1st request, Expected: True)"
+check_payload "/eval" "POST" "7>2" '{"result":true}' "Repeat: '7>2' (2nd request, Expected: True)"
+
+check_payload "/eval" "POST" "3>8" '{"result":false}' "Repeat: '3>8' (1st request, Expected: False)"
+check_payload "/eval" "POST" "3>8" '{"result":false}' "Repeat: '3>8' (2nd request, Expected: False)"
+
+# BUG-8 guard: same rule, different context. A stale cached plan would reuse
+# total=100 and wrongly return true for total=10.
+PAYLOAD_CACHE_A=$(printf "total=100,parts=4\n(total / parts) = 25")
+PAYLOAD_CACHE_B=$(printf "total=10,parts=4\n(total / parts) = 25")
+check_payload "/eval" "POST" "$PAYLOAD_CACHE_A" '{"result":true}' "Repeat: (total/parts)=25 with total=100 (Expected: True)"
+check_payload "/eval" "POST" "$PAYLOAD_CACHE_B" '{"result":false}' "Repeat: (total/parts)=25 with total=10 (Expected: False)"
 
 echo "-----------------------------------------------------------------"
 echo -e "${GREEN}✅ ALL TESTS PASSED SUCCESSFULLY!${NC}"

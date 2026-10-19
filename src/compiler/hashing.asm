@@ -1,21 +1,24 @@
 ; =============================================================================
 ; Module: src/compiler/hashing.asm
 ; Project: La Roca Rules Engine
-; Responsibility: String hashing for Variable Map (8-bit) and JIT Cache (64-bit).
+; Responsibility: String hashing for the Variable Map (64-bit) and JIT Cache (64-bit).
 ; =============================================================================
 
 section .text
-    global hash_token_8
+    global hash_name
     global hash_rules_64
 
 ; -----------------------------------------------------------------------------
-; Function: hash_token_8 (DJB2 Algorithm)
-; Use Case: Fast hashing for the Variable Map (Small collision-tolerant table).
-; In: RDI = Pointer to string start
-; Out: RAX = 8-bit Hash (0-255), RDI = Advanced to the delimiter
+; Function: hash_name (FNV-1a Algorithm, 64-bit)
+; Use Case: Hashing variable names for the open-addressing Variable Map.
+; In: RDI = Pointer to the name start (leading whitespace tolerated)
+; Out: RAX = 64-bit Hash
+;      RCX = Name length in bytes (0 if empty)
+;      RDX = Pointer to the first character of the name (after leading spaces)
+;      RDI = Advanced to the first delimiter (points AT it, not past)
+; Delimiters: space, ( ) = > < ~ ^ , newline, NUL
 ; -----------------------------------------------------------------------------
-hash_token_8:
-    ; 1. Skip leading whitespace
+hash_name:
 .skip_leading:
     cmp byte [rdi], ' '
     jne .init
@@ -23,46 +26,47 @@ hash_token_8:
     jmp .skip_leading
 
 .init:
-    xor rax, rax
-.h_loop:
-    movzx rdx, byte [rdi]
+    mov rdx, rdi                    ; RDX = name start
+    mov rax, 0xcbf29ce484222325     ; FNV-1a offset basis
+    mov r8,  0x100000001b3          ; FNV-1a prime
+    xor rcx, rcx                    ; length = 0
 
-    ; Token delimiters (Ends variable name hashing)
-    cmp dl, ' '
-    je .h_done
-    cmp dl, '('
-    je .h_done
-    cmp dl, ')'
-    je .h_done
-    cmp dl, '='
-    je .h_done
-    cmp dl, '>'
-    je .h_done
-    cmp dl, '<'
-    je .h_done
-    cmp dl, '~'
-    je .h_done
-    cmp dl, '^'
-    je .h_done
-    cmp dl, ','
-    je .h_done
-    cmp dl, 0x0A            ; Newline
-    je .h_done
-    test dl, dl             ; Null terminator
-    jz .h_done
+.loop:
+    movzx r9, byte [rdi]
 
-    ; DJB2 Algorithm: hash = ((hash << 5) + hash) + char
-    mov rdx, rax
-    shl rax, 5
-    add rax, rdx
-    movzx rdx, byte [rdi]
-    add rax, rdx
+    ; Token delimiters (ends variable name hashing)
+    cmp r9b, ' '
+    je .done
+    cmp r9b, '('
+    je .done
+    cmp r9b, ')'
+    je .done
+    cmp r9b, '='
+    je .done
+    cmp r9b, '>'
+    je .done
+    cmp r9b, '<'
+    je .done
+    cmp r9b, '~'
+    je .done
+    cmp r9b, '^'
+    je .done
+    cmp r9b, ','
+    je .done
+    cmp r9b, 0x0A                  ; Newline
+    je .done
+    test r9b, r9b                  ; Null terminator
+    jz .done
 
+    ; FNV-1a: hash = (hash XOR byte) * prime
+    xor rax, r9
+    imul rax, r8
+
+    inc rcx
     inc rdi
-    jmp .h_loop
+    jmp .loop
 
-.h_done:
-    and rax, 0xFF           ; Mask the result to 8 bits (256 slots)
+.done:
     ret
 
 ; -----------------------------------------------------------------------------
