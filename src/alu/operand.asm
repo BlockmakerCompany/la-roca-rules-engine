@@ -35,7 +35,7 @@ skip_spaces:
 ; Responsibility: Open-addressing probe with full name verification.
 ; In:  RAX = 64-bit hash, RCX = name length, RDX = name pointer
 ; Out: RDX = slot pointer, or 0 if not found
-; Preserves: RDI, RBX, RBP, R12-R15. Clobbers: RAX, RCX, R8, R9, RSI, R11.
+; Preserves: RDI, RBX, RBP, R12-R15. Clobbers: RAX, RCX, RDX, R8, R9, RSI, R11.
 ; -----------------------------------------------------------------------------
 lookup_var:
     and rax, 255

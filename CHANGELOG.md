@@ -11,3 +11,4 @@ The format follows Keep a Changelog and this project uses semantic versioning.
 
 ### Docs
 - translate internal roadmap and comments to English
+- document register clobber/preserve contracts in compiler and alu

@@ -141,8 +141,9 @@ MAP_PAYLOAD_4=$(printf "retry_count=1\nretry_count>4")
 check_payload "/eval" "POST" "$MAP_PAYLOAD_4" '{"result":false}' "Evaluate 'retry_count>4' mixed var and literal (Expected: False)"
 
 echo "--- 6b. Collision Safety (Name-Verified Open Addressing) ---"
-# 'ba' and 'iz' both hash to slot 3 under the legacy 8-bit DJB2 hash.
-# They must resolve independently by name, not by slot index.
+# Regression guard: two short names that collided on the same slot under the
+# legacy 8-bit DJB2 hash. The current FNV-1a 64-bit hash may not collide, but
+# these cases still prove resolution is by full name verification, not by slot index.
 COLLISION_1=$(printf "ba=1,iz=2\nba=1")
 check_payload "/eval" "POST" "$COLLISION_1" '{"result":true}' "Collision: 'ba=1' resolves ba (Expected: True)"
 

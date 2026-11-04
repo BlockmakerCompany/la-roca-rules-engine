@@ -16,6 +16,7 @@ section .text
 ;      RCX = Name length in bytes (0 if empty)
 ;      RDX = Pointer to the first character of the name (after leading spaces)
 ;      RDI = Advanced to the first delimiter (points AT it, not past)
+; Preserves: RBX, RBP, RSI, R12-R15. Clobbers: RAX, RCX, RDX, R8, R9, RDI.
 ; Delimiters: space, ( ) = > < ~ ^ , newline, NUL
 ; -----------------------------------------------------------------------------
 hash_name:

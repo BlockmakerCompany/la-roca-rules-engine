@@ -117,6 +117,9 @@ build_var_map:
 
 .store_value:
     ; 4. Parse and store the value (tag at +16, value at +24).
+    ;    parse_and_store_value preserves R14 (System V callee-saved), so the
+    ;    slot pointer stays valid. R14 is not dereferenced after this call
+    ;    anyway (.check_delimiter only reads RDI).
     lea r9, [r14 + 16]
     call parse_and_store_value
 
