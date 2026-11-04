@@ -130,7 +130,10 @@ parse_and_store_value:
 
 .skip_trailing_spaces:
     cmp byte [rdi], ' '
+    je .skip_trailing_byte
+    cmp byte [rdi], 0x0D            ; Carriage Return (CRLF line endings)
     jne .done
+.skip_trailing_byte:
     inc rdi
     jmp .skip_trailing_spaces
 .done:

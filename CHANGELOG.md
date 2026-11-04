@@ -8,6 +8,7 @@ The format follows Keep a Changelog and this project uses semantic versioning.
 ### Fixed
 - collision-proof variable map (open addressing + name verification)
 - disable the broken JIT cache that returned incorrect results on cache hit
+- reject empty var names and malformed map values, handle CRLF
 
 ### Docs
 - translate internal roadmap and comments to English

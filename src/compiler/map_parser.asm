@@ -8,6 +8,7 @@ section .bss
     ; 256 slots * 32 bytes = 8192 bytes
     ; Slot layout: [name_ptr 8][name_len 8][tag 8][value 8]
     ;   tag: 0 = empty, 1 = Float64, 2 = String pointer
+    ; Limit: 256 variables per request (open addressing; probe count caps at 256).
     var_map resb 8192
 
 section .text
@@ -56,6 +57,8 @@ build_var_map:
     ; 1. Hash the variable name (RAX=hash, RCX=len, RDX=name_start).
     ;    hash_name advances RDI up to the delimiter (e.g. '=' or a space).
     call hash_name
+    test rcx, rcx
+    jz .error               ; Empty variable name -> malformed map
     mov rbx, rax            ; RBX = hash
     mov r12, rcx            ; R12 = name length
     mov r13, rdx            ; R13 = name start pointer
@@ -122,6 +125,8 @@ build_var_map:
     ;    anyway (.check_delimiter only reads RDI).
     lea r9, [r14 + 16]
     call parse_and_store_value
+    cmp rax, 3
+    je .error               ; Malformed value -> reject the whole request
 
     ; 5. Determine whether there are more variables or the map is done.
     ;    parse_and_store_value leaves RDI at the next delimiter (',' or '\n').
@@ -132,7 +137,10 @@ build_var_map:
     je .done
 
     cmp byte [rdi], ' '
+    je .skip_ws
+    cmp byte [rdi], 0x0D            ; Carriage Return (CRLF line endings)
     jne .error
+.skip_ws:
     inc rdi
     jmp .check_delimiter
 

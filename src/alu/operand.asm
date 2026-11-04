@@ -113,6 +113,8 @@ get_operand:
 .check_var:
     ; --- 3. Resolve Variable from VarMap (name-verified) ---
     call hash_name          ; RAX=hash, RCX=len, RDX=name_start, RDI at delimiter
+    test rcx, rcx
+    jz .var_error           ; Empty variable name
     call lookup_var         ; RDX = slot pointer, or 0
     test rdx, rdx
     jz .var_error
@@ -141,6 +143,8 @@ get_operand:
     ; --- 4. Resolve '#' Operator (String Length) ---
     inc rdi                 ; Skip the '#' character
     call hash_name
+    test rcx, rcx
+    jz .var_error           ; Empty variable name after '#'
     call lookup_var
     test rdx, rdx
     jz .var_error

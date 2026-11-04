@@ -141,17 +141,17 @@ MAP_PAYLOAD_4=$(printf "retry_count=1\nretry_count>4")
 check_payload "/eval" "POST" "$MAP_PAYLOAD_4" '{"result":false}' "Evaluate 'retry_count>4' mixed var and literal (Expected: False)"
 
 echo "--- 6b. Collision Safety (Name-Verified Open Addressing) ---"
-# Regression guard: two short names that collided on the same slot under the
-# legacy 8-bit DJB2 hash. The current FNV-1a 64-bit hash may not collide, but
-# these cases still prove resolution is by full name verification, not by slot index.
-COLLISION_1=$(printf "ba=1,iz=2\nba=1")
-check_payload "/eval" "POST" "$COLLISION_1" '{"result":true}' "Collision: 'ba=1' resolves ba (Expected: True)"
+# Regression guard: 'ex' and 'fa' both hash to slot 168 under FNV-1a 64-bit
+# (slot index = hash & 0xFF), forcing a real open-addressing collision. They
+# must resolve independently by full name verification, not by slot index.
+COLLISION_1=$(printf "ex=1,fa=2\nex=1")
+check_payload "/eval" "POST" "$COLLISION_1" '{"result":true}' "Collision: 'ex=1' resolves ex (Expected: True)"
 
-COLLISION_2=$(printf "ba=1,iz=2\niz=2")
-check_payload "/eval" "POST" "$COLLISION_2" '{"result":true}' "Collision: 'iz=2' resolves iz (Expected: True)"
+COLLISION_2=$(printf "ex=1,fa=2\nfa=2")
+check_payload "/eval" "POST" "$COLLISION_2" '{"result":true}' "Collision: 'fa=2' resolves fa (Expected: True)"
 
-COLLISION_3=$(printf "ba=1,iz=2\nba=2")
-check_payload "/eval" "POST" "$COLLISION_3" '{"result":false}' "Collision: 'ba=2' is false (Expected: False)"
+COLLISION_3=$(printf "ex=1,fa=2\nex=2")
+check_payload "/eval" "POST" "$COLLISION_3" '{"result":false}' "Collision: 'ex=2' is false (Expected: False)"
 echo ""
 
 echo "--- 7. Multi-Rule Engine (AND Strategy / Fail-Fast) ---"
