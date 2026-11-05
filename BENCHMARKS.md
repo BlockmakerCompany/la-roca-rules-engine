@@ -1,4 +1,4 @@
-# 📈 Performance Benchmarks: La Roca Rules Engine (V1.0)
+# 📈 Performance Benchmarks: La Roca Rules Engine (V1.1)
 
 This document details the stress tests and performance analysis of **La Roca Rules Engine** running in a production-grade Kubernetes environment. Our goal was to measure the throughput of the **JIT/VM Hybrid architecture** and identify the limits of the x86_64 Assembly networking stack.
 
@@ -91,7 +91,7 @@ In **La Roca**, the engine finishes processing a batch of epoll events so quickl
 
 ## 🏁 Final Technical Conclusion
 
-The V1.0 benchmarks confirm that moving the logic to **x86_64 Assembly** and using **SSE2 hardware registers** has effectively removed the software layer as a bottleneck.
+The V1.1 benchmarks confirm that moving the logic to **x86_64 Assembly** and using **SSE2 hardware registers** has effectively removed the software layer as a bottleneck.
 
 ### Key Takeaways:
 1. **Zero-Libc Dominance:** No Garbage Collection or Heap fragmentation means $0.00\%$ error rates even under 100% CPU saturation.

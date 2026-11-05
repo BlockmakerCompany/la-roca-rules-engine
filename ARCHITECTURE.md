@@ -210,7 +210,7 @@ La Roca is designed to be the bedrock of a new generation of hyper-efficient inf
 
 * **Design & Architecture:** Fernando Ezequiel Mancuso
 * **Organization:** [BlockmakerCompany](https://github.com/BlockmakerCompany)
-* **Release:** March 2026 | Stable Build 1.0.0
+* **Release:** March 2026 | Stable Build 1.1.0
 * **Inquiries:** For industrial integration or low-level consulting, reach out via [GitHub Issues](https://github.com/BlockmakerCompany/la-roca-rules-engine/issues).
 
 > *"If it requires a library, it doesn't belong in the core."* > — **The BlockMaker Manifesto**

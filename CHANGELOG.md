@@ -5,6 +5,8 @@ The format follows Keep a Changelog and this project uses semantic versioning.
 
 ## [Unreleased]
 
+## [v1.1.0] - 2026-11-05
+
 ### Fixed
 - collision-proof variable map (open addressing + name verification)
 - disable the broken JIT cache that returned incorrect results on cache hit

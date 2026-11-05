@@ -7,7 +7,7 @@ info:
     parentheses grouping and inline boolean logic. It operates with O(1) memory lookup for context 
     variables, SSE2 hardware acceleration for Float64 math and arithmetic, Zero-Copy memory mutation 
     for Strings, and absolute whitespace tolerance—all while maintaining ~80k+ RPS.
-  version: 3.1.0
+  version: 1.1.0
   contact:
     name: Blockmaker
     url: https://github.com/BlockmakerCompany
