@@ -53,6 +53,11 @@ log_trace_types:
 ; Function: parse_and_store_value
 ; In: RDI = Source String, R9 = Slot Pointer
 ; Out: RAX = Status (1=Float, 2=String, 3=Error), RDI advanced
+; Preserves: R14 (System V callee-saved; relied on by build_var_map's slot walk).
+; Clobbers: RAX, RCX, RDI (advanced). The reserved/error paths also clobber
+;           caller-saved registers via get_now_unix / operand_error.
+; Note: R9 is read-only on success but may be clobbered by operand_error on
+;       the unterminated-string error path (.failed).
 ; -----------------------------------------------------------------------------
 parse_and_store_value:
 .skip_leading_spaces:
@@ -125,7 +130,10 @@ parse_and_store_value:
 
 .skip_trailing_spaces:
     cmp byte [rdi], ' '
+    je .skip_trailing_byte
+    cmp byte [rdi], 0x0D            ; Carriage Return (CRLF line endings)
     jne .done
+.skip_trailing_byte:
     inc rdi
     jmp .skip_trailing_spaces
 .done:

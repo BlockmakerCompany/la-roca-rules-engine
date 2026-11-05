@@ -124,6 +124,8 @@ parse_json_rule:
 .pop_and_map:
     pop rdi
     call build_var_map
+    cmp rax, 3
+    je .local_eval_error      ; Map parse failed (malformed payload) -> 400
     jmp .skip_empty_lines
 
 .pop_and_rules:
